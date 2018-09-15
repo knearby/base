@@ -1,0 +1,107 @@
+@startuml
+title Knearby System Overview
+
+legend
+|= |= Type |
+|<back:#0077EE>___</back>| Development |
+|<back:#0033AA>___</back>| Continuous Integration & Delivery |
+|<back:#000000>___</back>| Operations |
+|<back:#FF8800>___</back>| Production |
+|<back:#AAAAAA>___</back>| Observability & Monitoring |
+|<back:#00CC00>___</back>| User Flow |
+endlegend
+
+scale 1
+
+package uers {
+  actor user as "User"
+  actor dev as "Developer"
+  actor devops as "DevOps"
+}
+
+entity app_ios as "iOS" <<**App**>>
+entity app_and as "Android" <<**App**>>
+entity web_site as "knearby.org" <<**Website**>>
+
+cloud github as "GitHub (@knearby)" <<**Source Repository**>> #DDEEFF {
+  entity srcBase as "knearby/base" <<**Repo**>>
+  entity srcWebsite as "knearby/www" <<**Repo**>>
+  entity srcSvcUsers as "knearby/users" <<**Repo**>>
+  entity srcSvcNotes as "knearby/notes" <<**Repo**>>
+}
+
+cloud travis as "Travis" <<**CI/CD Pipeline**>> #BBCCFF {
+  entity ciUsers as "Users CI" <<**Pipeline**>>
+  entity ciNotes as "Notes CI" <<**Pipeline**>>
+  entity ciSite as "Website CI" <<**Pipeline**>>
+}
+
+cloud dockerhub as "Docker Hub" <<**Image Store**>> #BBCCFF {
+  entity imgUsers as "knearby/users" <<**Image**>>
+  entity imgNotes as "knearby/notes" <<**Image**>>
+}
+
+cloud gcp as "Kubernetes Cluster" <<**Production Cloud**>> #DDFFDD {
+  component gateway as "Ambassador" <<**API Gateway**>>
+  component prometheus as "Prometheus" <<**Metrics Collector**>>
+  component grafana as "Grafana" <<**Metrics Dashboard**>>
+  component users as "Users" {
+    entity svcUsers as "Users" <<**Service**>>
+    database dbUsers as "MySQL" <<**DB**>>
+    entity dbUsersExporter as "MySQL Exporter" <<**Metrics Exporter**>>
+  }
+  component notes as "Notes" {
+    entity svcNotes as "Notes" <<**Service**>>
+    database dbNotes as "MySQL" <<**DB**>>
+    entity dbNotesExporter as "MySQL Exporter" <<**Metrics Exporter**>>
+  }
+}
+
+' development
+' color: #0077EE
+dev -[#0077EE]-> github : "push"
+github -[#0077EE]-> travis : "webhook"
+
+' operations
+' color: #DDDD00
+devops -[#000000]-> travis : "travis-ci.org"
+devops -[#000000]-> dockerhub : "hub.docker.com"
+devops -[#000000]-> gcp : "kubectl"
+
+
+' ci/cd
+' color: #0033AA
+ciUsers -[#0033AA]-> imgUsers : "docker push"
+ciUsers -[#0033AA]-> srcSvcUsers : "git tag"
+ciNotes -[#0033AA]-> imgNotes : "docker push"
+ciNotes -[#0033AA]-> srcSvcNotes : "git tag"
+svcUsers -[#0033AA]-> imgUsers : "docker pull"
+svcNotes -[#0033AA]-> imgNotes: "docker pull"
+
+' production 
+' color: #FF8800
+svcUsers <~[#FF8800]~> dbUsers
+dbUsers .[#FF8800].> dbUsersExporter
+svcNotes <~[#FF8800]~> dbNotes
+dbNotes .[#FF8800].> dbNotesExporter
+
+' observability
+' color: #AAAAAA
+prometheus -[#AAAAAA]-> gateway : "/metrics"
+prometheus -[#AAAAAA]-> svcUsers : "/metrics"
+prometheus -[#AAAAAA]-> svcNotes : "/metrics"
+prometheus -[#AAAAAA]-> dbUsersExporter : "/metrics"
+prometheus -[#AAAAAA]-> dbNotesExporter : "/metrics"
+grafana --> prometheus
+
+' app flow
+' color: #00CC00
+user -[#00CC00]-> app_ios : "iPhone"
+user -[#00CC00]-> app_and : "Android"
+user -[#00CC00]-> web_site : "www.knearby.org"
+app_ios -[#00CC00]-> gateway : "api.knearby.org"
+app_and -[#00CC00]-> gateway : "api.knearby.org"
+gateway -[#00CC00]-> svcUsers : "/user/*"
+gateway -[#00CC00]-> svcNotes : "/note/*"
+
+@enduml

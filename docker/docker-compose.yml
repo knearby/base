@@ -1,0 +1,27 @@
+version: "3.5"
+networks:
+  knearby:
+    name: "knearby"
+services:
+  ambassador:
+    image: quay.io/datawire/ambassador:0.39.0
+    networks:
+    - knearby
+    ports:
+    - 8080:80
+    volumes:
+    - ../config/ambassador:/ambassador/ambassador-config
+  mysql: # https://hub.docker.com/_/mysql/
+    image: mysql:5.7.23
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: knearby
+      MYSQL_USER: knearby
+      MYSQL_PASSWORD: knearby
+    networks:
+    - knearby
+    ports:
+    - 53306:3306
+    user: ${USER_ID}
+    volumes:
+    - ../data/mysql:/var/lib/mysql   
