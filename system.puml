@@ -11,7 +11,7 @@ legend
 |<back:#00CC00>___</back>| User Flow |
 endlegend
 
-scale 1
+scale 2
 
 package uers {
   actor user as "User"
